@@ -134,7 +134,7 @@ local function makeButton(text)
         setError("WIP Feature")
     end)
 
-    return btn
+    return btn 
 end
 
 local function populateTabWIP()
