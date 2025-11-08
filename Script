@@ -108,7 +108,7 @@ local function updateCanvas()
     buttonsPanel.CanvasSize = UDim2.new(0,0,0, buttonsLayout.AbsoluteContentSize.Y + 12)
 end
 
--- Button Factory
+-- Button Factory (returns created button)
 local function makeButton(text)
     local btn = new("TextButton", {
         Parent = buttonsPanel,
@@ -133,15 +133,90 @@ local function makeButton(text)
     btn.MouseButton1Click:Connect(function()
         setError("WIP Feature")
     end)
+
+    return btn
 end
 
 local function populateTabWIP()
+    -- clear any existing buttons first
+    for _, child in pairs(buttonsPanel:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
     for _=1,6 do makeButton("WIP!") end
     updateCanvas()
 end
 
+-- Draggable
+local dragging = false
+local dragStart, startPos
+local UIS = UserInputService
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+main.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = main.Position
+    end
+end)
+UIS.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        updateDrag(input)
+    end
+end)
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+-- Minimize / Maximize
+local minimized = false
+local origSize = main.Size
+toggleBtn.MouseButton1Click:Connect(function()
+    if minimized then
+        minimized = false
+        toggleBtn.Text = "Minimize"
+        errFrame.Visible = true
+        buttonsPanel.Visible = true
+        divider.Visible = true
+        tabsPanel.Visible = true
+        TweenService:Create(main, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {Size = origSize}):Play()
+    else
+        minimized = true
+        toggleBtn.Text = "Maximize"
+        errFrame.Visible = false
+        buttonsPanel.Visible = false
+        divider.Visible = false
+        tabsPanel.Visible = false
+        TweenService:Create(main, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {Size = UDim2.new(origSize.X.Scale, origSize.X.Offset, 0, 48)}):Play()
+    end
+end)
+
+-- Toggle UI with Delete (fixed position bug)
+local visible = true
+local togglePosition = main.Position
+local function setVisible(v)
+    visible = v
+    main.Visible = v
+    main.Position = togglePosition
+    setError(v and "Menu opened" or "Menu closed")
+end
+
+ContextActionService:BindAction("BMF_TOGGLE_UI", function(_, state)
+    if state == Enum.UserInputState.Begin then
+        togglePosition = main.Position
+        setVisible(not visible)
+    end
+    return Enum.ContextActionResult.Sink
+end, false, Enum.KeyCode.Delete)
+
 -- Create Tabs
 local tabNames = {"Player","Teleports","ESP","Cheats","Misc","Scripts"}
+local tabButtons = {}
 for _,name in ipairs(tabNames) do
     local tbtn = new("TextButton", {
         Parent = tabsPanel,
@@ -154,47 +229,66 @@ for _,name in ipairs(tabNames) do
     }, tabsPanel)
     new("UICorner", {CornerRadius = UDim.new(0,6)}, tbtn)
 
-  tbtn.MouseButton1Click:Connect(function()
-    -- Highlight selected tab
-    for _,b in ipairs(tabsPanel:GetChildren()) do
-        if b:IsA("TextButton") then
-            b.BackgroundColor3 = Color3.fromRGB(55,55,55)
+    tbtn.MouseButton1Click:Connect(function()
+        -- Highlight selected tab
+        for _,b in ipairs(tabsPanel:GetChildren()) do
+            if b:IsA("TextButton") then
+                b.BackgroundColor3 = Color3.fromRGB(55,55,55)
+            end
         end
-    end
-    tbtn.BackgroundColor3 = Color3.fromRGB(92,92,92)
+        tbtn.BackgroundColor3 = Color3.fromRGB(92,92,92)
 
-    -- Clear existing buttons
-    for _, child in pairs(buttonsPanel:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-
-    -- If Scripts tab selected, load actual script buttons
-    if tbtn.Text == "Scripts" then
-        
-        local function makeScriptBtn(name, code)
-            local btn = makeButton(name)
-            btn.MouseButton1Click:Connect(function()
-                setError("Loading: " .. name)
-                loadstring(code)()
-            end)
+        -- Clear existing buttons
+        for _, child in pairs(buttonsPanel:GetChildren()) do
+            if child:IsA("TextButton") then
+                child:Destroy()
+            end
         end
 
-        makeScriptBtn("Infinite Yield", [[game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")]])
-        makeScriptBtn("Dex Explorer", [[game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua")]])
-        makeScriptBtn("FTF HAX", [[game:HttpGet("https://raw.githubusercontent.com/LeviTheOtaku/roblox-scripts/main/FTFHAX.lua",true)]])
-        makeScriptBtn("Luaware", [[game:HttpGet("https://raw.githubusercontent.com/bedra45/Random-games-xd/main/bedraFtfFinalGUI")]])
+        -- If Scripts tab selected, load actual script buttons
+        if tbtn.Text == "Scripts" then
 
-        updateCanvas()
-        return
-    end
+            local function makeScriptBtn(name, url)
+                local btn = makeButton(name)
+                -- override the default WIP handler
+                btn.MouseButton1Click:Connect(function()
+                    pcall(function() setError("Loading: " .. name) end)
+                    local ok, err = pcall(function()
+                        local src = game:HttpGet(url, true)
+                        loadstring(src)()
+                    end)
+                    if not ok then
+                        setError(name .. " error: " .. tostring(err))
+                    else
+                        setError(name .. " loaded")
+                    end
+                end)
+            end
 
-    -- Otherwise load WIP placeholders
-    populateTabWIP()
-end)
+            makeScriptBtn("Infinite Yield", "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
+            makeScriptBtn("Dex Explorer", "https://raw.githubusercontent.com/infyiff/backup/main/dex.lua")
+            makeScriptBtn("FTF HAX", "https://raw.githubusercontent.com/LeviTheOtaku/roblox-scripts/main/FTFHAX.lua")
+            makeScriptBtn("Luaware", "https://raw.githubusercontent.com/bedra45/Random-games-xd/main/bedraFtfFinalGUI")
+
+            updateCanvas()
+            return
+        end
+
+        -- Otherwise load WIP placeholders
+        populateTabWIP()
+    end)
+
+    table.insert(tabButtons, tbtn)
+end
 
 -- Default open Player
+-- Highlight Player tab
+for _,tbtn in ipairs(tabButtons) do
+    if tbtn.Text == "Player" then
+        tbtn.BackgroundColor3 = Color3.fromRGB(92,92,92)
+        break
+    end
+end
 populateTabWIP()
 setError("BMF UI Loaded!")
 main.Visible = true
