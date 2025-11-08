@@ -1,0 +1,200 @@
+-- Flee the Facility - By BMF
+
+-- Services
+local Players = game:GetService("Players")
+local ContextActionService = game:GetService("ContextActionService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Helper: Instance Creator
+local function new(class, props, parent)
+    local obj = Instance.new(class)
+    if props then for k,v in pairs(props) do obj[k] = v end end
+    if parent then obj.Parent = parent end
+    return obj
+end
+
+-- ScreenGui Root
+local screenGui = new("ScreenGui", {Name = "BMF_UI_FTF", ResetOnSpawn = false}, playerGui)
+
+-- Main Window
+local main = new("Frame", {
+    Name = "Main",
+    Size = UDim2.new(0,520,0,520),
+    Position = UDim2.new(0.5,-260,0.5,-260),
+    BackgroundColor3 = Color3.fromRGB(28,28,28),
+    BorderSizePixel = 0,
+}, screenGui)
+new("UICorner", {CornerRadius = UDim.new(0,10)}, main)
+new("UIStroke", {Color = Color3.fromRGB(22,22,22), Thickness = 1, Transparency = 0.9}, main)
+
+-- Title Bar
+local titleBar = new("Frame", {Parent = main, Size = UDim2.new(1,0,0,48), BackgroundColor3 = Color3.fromRGB(40,40,40)}, main)
+new("UICorner", {CornerRadius = UDim.new(0,8)}, titleBar)
+local titleLabel = new("TextLabel", {
+    Parent = titleBar,
+    Text = "Flee The Facility - BMF",
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1,-120,1,0),
+    Position = UDim2.new(0,16,0,0),
+    Font = Enum.Font.GothamBold,
+    TextSize = 20,
+    TextColor3 = Color3.fromRGB(255,255,255),
+    TextXAlignment = Enum.TextXAlignment.Left,
+}, titleBar)
+
+-- Minimize/Maximize Button
+local toggleBtn = new("TextButton", {
+    Parent = titleBar,
+    Size = UDim2.new(0,96,0,30),
+    Position = UDim2.new(1,-110,0,9),
+    Text = "Minimize",
+    Font = Enum.Font.Gotham,
+    TextSize = 14,
+    TextColor3 = Color3.fromRGB(255,255,255),
+    BackgroundColor3 = Color3.fromRGB(65,65,65),
+    BorderSizePixel = 0,
+}, titleBar)
+new("UICorner", {CornerRadius = UDim.new(0,6)}, toggleBtn)
+
+-- Logger
+local errFrame = new("Frame", {
+    Parent = main,
+    Size = UDim2.new(1,-24,0,30),
+    Position = UDim2.new(0,12,0,56),
+    BackgroundColor3 = Color3.fromRGB(44,44,44),
+    BorderSizePixel = 0,
+}, main)
+new("UICorner", {CornerRadius = UDim.new(0,6)}, errFrame)
+local errLabel = new("TextLabel", {
+    Parent = errFrame,
+    Text = "Logging: None",
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1,-12,1,0),
+    Position = UDim2.new(0,6,0,0),
+    Font = Enum.Font.Gotham,
+    TextSize = 14,
+    TextColor3 = Color3.fromRGB(255,100,100),
+    TextXAlignment = Enum.TextXAlignment.Left,
+}, errFrame)
+
+local function setError(t) errLabel.Text = "Logging: " .. tostring(t or "None") end
+
+-- Divider + Tabs Panel
+local divider = new("Frame", {Parent = main, Size = UDim2.new(0,2,1,-118), Position = UDim2.new(0,152,0,90), BackgroundColor3 = Color3.fromRGB(75,75,75)}, main)
+
+local tabsPanel = new("Frame", {Parent = main, Size = UDim2.new(0,152,1,-118), Position = UDim2.new(0,0,0,90), BackgroundTransparency = 1}, main)
+local tabsLayout = new("UIListLayout", {Padding = UDim.new(0,8), SortOrder = Enum.SortOrder.LayoutOrder}, tabsPanel)
+new("UIPadding", {PaddingLeft = UDim.new(0,12), PaddingTop = UDim.new(0,8)}, tabsPanel)
+
+-- Buttons Panel
+local buttonsPanel = new("ScrollingFrame", {
+    Parent = main,
+    Name = "ButtonsPanel",
+    Size = UDim2.new(1,-180,1,-118),
+    Position = UDim2.new(0,176,0,90),
+    BackgroundTransparency = 1,
+    ScrollBarThickness = 8,
+}, main)
+local buttonsLayout = new("UIListLayout", {Padding = UDim.new(0,8), SortOrder = Enum.SortOrder.LayoutOrder}, buttonsPanel)
+new("UIPadding", {PaddingLeft = UDim.new(0,4), PaddingRight = UDim.new(0,8), PaddingTop = UDim.new(0,8)}, buttonsPanel)
+
+local function updateCanvas()
+    RunService.Heartbeat:Wait()
+    buttonsPanel.CanvasSize = UDim2.new(0,0,0, buttonsLayout.AbsoluteContentSize.Y + 12)
+end
+
+-- Button Factory
+local function makeButton(text)
+    local btn = new("TextButton", {
+        Parent = buttonsPanel,
+        Size = UDim2.new(1,0,0,40),
+        BackgroundColor3 = Color3.fromRGB(72,72,72),
+        BorderSizePixel = 0,
+        Font = Enum.Font.Gotham,
+        TextSize = 15,
+        TextColor3 = Color3.fromRGB(255,255,255),
+        Text = text,
+        AutoButtonColor = false,
+    }, buttonsPanel)
+    new("UICorner", {CornerRadius = UDim.new(0,6)}, btn)
+
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(92,92,92)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(72,72,72)}):Play()
+    end)
+
+    btn.MouseButton1Click:Connect(function()
+        setError("WIP Feature")
+    end)
+end
+
+local function populateTabWIP()
+    for _=1,6 do makeButton("WIP!") end
+    updateCanvas()
+end
+
+-- Create Tabs
+local tabNames = {"Player","Teleports","ESP","Cheats","Misc","Scripts"}
+for _,name in ipairs(tabNames) do
+    local tbtn = new("TextButton", {
+        Parent = tabsPanel,
+        Size = UDim2.new(1,-24,0,40),
+        BackgroundColor3 = Color3.fromRGB(55,55,55),
+        Text = name,
+        Font = Enum.Font.Gotham,
+        TextSize = 15,
+        TextColor3 = Color3.fromRGB(255,255,255),
+    }, tabsPanel)
+    new("UICorner", {CornerRadius = UDim.new(0,6)}, tbtn)
+
+  tbtn.MouseButton1Click:Connect(function()
+    -- Highlight selected tab
+    for _,b in ipairs(tabsPanel:GetChildren()) do
+        if b:IsA("TextButton") then
+            b.BackgroundColor3 = Color3.fromRGB(55,55,55)
+        end
+    end
+    tbtn.BackgroundColor3 = Color3.fromRGB(92,92,92)
+
+    -- Clear existing buttons
+    for _, child in pairs(buttonsPanel:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+
+    -- If Scripts tab selected, load actual script buttons
+    if tbtn.Text == "Scripts" then
+        
+        local function makeScriptBtn(name, code)
+            local btn = makeButton(name)
+            btn.MouseButton1Click:Connect(function()
+                setError("Loading: " .. name)
+                loadstring(code)()
+            end)
+        end
+
+        makeScriptBtn("Infinite Yield", [[game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")]])
+        makeScriptBtn("Dex Explorer", [[game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua")]])
+        makeScriptBtn("FTF HAX", [[game:HttpGet("https://raw.githubusercontent.com/LeviTheOtaku/roblox-scripts/main/FTFHAX.lua",true)]])
+        makeScriptBtn("Luaware", [[game:HttpGet("https://raw.githubusercontent.com/bedra45/Random-games-xd/main/bedraFtfFinalGUI")]])
+
+        updateCanvas()
+        return
+    end
+
+    -- Otherwise load WIP placeholders
+    populateTabWIP()
+end)
+
+-- Default open Player
+populateTabWIP()
+setError("BMF UI Loaded!")
+main.Visible = true
