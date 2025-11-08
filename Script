@@ -3,9 +3,9 @@
 --// Services
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local ContextActionService = game:GetService("ContextActionService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local ContextActionService = game:GetService("ContextActionService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -13,7 +13,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 --// Helper
 local function new(class, props, parent)
     local obj = Instance.new(class)
-    if props then for k,v in pairs(props) do obj[k] = v end end
+    if props then for k,v in pairs(props) do obj[k] = v end
     if parent then obj.Parent = parent end
     return obj
 end
@@ -28,6 +28,7 @@ local main = new("Frame", {
     BackgroundColor3 = Color3.fromRGB(15,15,15),
     BorderSizePixel = 0
 }, screenGui)
+
 new("UICorner", {CornerRadius = UDim.new(0,10)}, main)
 new("UIStroke", {Color = Color3.fromRGB(120,0,0), Thickness = 1, Transparency = 0.3}, main)
 
@@ -50,6 +51,101 @@ local titleLabel = new("TextLabel", {
     TextColor3 = Color3.fromRGB(255,255,255),
     TextXAlignment = Enum.TextXAlignment.Left,
 })
+
+--// DRAGGING + SAVE POSITION
+local dragging = false
+local dragStart, startPos
+local UIS = UserInputService
+
+local function savePosition()
+    local pos = main.Position
+    main:SetAttribute("SavedPos", {pos.X.Scale, pos.X.Offset, pos.Y.Scale, pos.Y.Offset})
+end
+
+local function loadPosition()
+    local pos = main:GetAttribute("SavedPos")
+    if pos then
+        main.Position = UDim2.new(pos[1], pos[2], pos[3], pos[4])
+    end
+end
+loadPosition()
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = main.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+                savePosition()
+            end
+        end)
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+--// MINIMIZE / MAXIMIZE
+local toggleBtn = new("TextButton", {
+    Parent = titleBar,
+    Size = UDim2.new(0,90,0,30),
+    Position = UDim2.new(1,-96,0,9),
+    Text = "Minimize",
+    TextColor3 = Color3.fromRGB(255,255,255),
+    BackgroundColor3 = Color3.fromRGB(90,0,0),
+    Font = Enum.Font.Gotham,
+    TextSize = 14,
+    BorderSizePixel = 0,
+})
+new("UICorner", {CornerRadius = UDim.new(0,6)}, toggleBtn)
+
+-- Logic like Prison Life
+local minimized = false
+local origSize = main.Size
+local visible = true
+local togglePosition = main.Position
+
+local function setVisible(v)
+    visible = v
+    main.Visible = v
+    main.Position = togglePosition
+    errLabel.Text = v and "Menu opened" or "Menu closed"
+end
+
+toggleBtn.MouseButton1Click:Connect(function()
+    if minimized then
+        minimized = false
+        toggleBtn.Text = "Minimize"
+        errFrame.Visible = true
+        buttonsPanel.Visible = true
+        divider.Visible = true
+        tabsPanel.Visible = true
+        TweenService:Create(main, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {Size = origSize}):Play()
+    else
+        minimized = true
+        toggleBtn.Text = "Maximize"
+        errFrame.Visible = false
+        buttonsPanel.Visible = false
+        divider.Visible = false
+        tabsPanel.Visible = false
+        TweenService:Create(main, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {Size = UDim2.new(origSize.X.Scale, origSize.X.Offset, 0, 48)}):Play()
+    end
+end)
+
+ContextActionService:BindAction("BMF_TOGGLE_UI", function(_, state)
+    if state == Enum.UserInputState.Begin then
+        togglePosition = main.Position
+        setVisible(not visible)
+    end
+    return Enum.ContextActionResult.Sink
+end, false, Enum.KeyCode.Delete)
 
 --// Logger
 local errFrame = new("Frame", {
@@ -134,116 +230,6 @@ local function populateWIP()
     updateCanvas()
 end
 
---// DRAGGING + SAVE POSITION
-local dragging = false
-local dragStart, startPos
-
-local function savePosition()
-    local pos = main.Position
-    main:SetAttribute("SavedPos", {pos.X.Scale, pos.X.Offset, pos.Y.Scale, pos.Y.Offset})
-end
-
-local function loadPosition()
-    local pos = main:GetAttribute("SavedPos")
-    if pos then
-        main.Position = UDim2.new(pos[1], pos[2], pos[3], pos[4])
-    end
-end
-loadPosition()
-
-titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = main.Position
-
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-                savePosition()
-            end
-        end)
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
---// MINIMIZE / MAXIMIZE (Prison Life style)
-local toggleBtn = new("TextButton", {
-    Parent = titleBar,
-    Size = UDim2.new(0,90,0,30),
-    Position = UDim2.new(1,-96,0,9),
-    Text = "Minimize",
-    TextColor3 = Color3.fromRGB(255,255,255),
-    BackgroundColor3 = Color3.fromRGB(90,0,0),
-    Font = Enum.Font.Gotham,
-    TextSize = 14,
-    BorderSizePixel = 0,
-})
-new("UICorner", {CornerRadius = UDim.new(0,6)}, toggleBtn)
-
--- Save original sizes
-local panels = {
-    mainSize = main.Size,
-    errFrameSize = errFrame.Size,
-    buttonsPanelSize = buttonsPanel.Size,
-    tabsPanelSize = tabsPanel.Size,
-    dividerSize = divider.Size
-}
-
-local minimized = false
-
-local function minimizeUI()
-    minimized = true
-    toggleBtn.Text = "Maximize"
-    TweenService:Create(main, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {Size = UDim2.new(main.Size.X.Scale, main.Size.X.Offset, 0, 48)}):Play()
-    errFrame.Visible = false
-    buttonsPanel.Visible = false
-    tabsPanel.Visible = false
-    divider.Visible = false
-end
-
-local function maximizeUI()
-    minimized = false
-    toggleBtn.Text = "Minimize"
-    TweenService:Create(main, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {Size = panels.mainSize}):Play()
-    errFrame.Visible = true
-    buttonsPanel.Visible = true
-    tabsPanel.Visible = true
-    divider.Visible = true
-end
-
-toggleBtn.MouseButton1Click:Connect(function()
-    if minimized then
-        maximizeUI()
-    else
-        minimizeUI()
-    end
-end)
-
--- Toggle UI with Delete key
-local visible = true
-local togglePosition = main.Position
-local function setVisible(v)
-    visible = v
-    main.Visible = v
-    main.Position = togglePosition
-    setError(v and "Menu opened" or "Menu closed")
-end
-
-ContextActionService:BindAction("BMF_TOGGLE_UI", function(_, state)
-    if state == Enum.UserInputState.Begin then
-        togglePosition = main.Position
-        setVisible(not visible)
-    end
-    return Enum.ContextActionResult.Sink
-end, false, Enum.KeyCode.Delete)
-
 --// Tabs
 local tabNames = {"Player","Beast","Survivor","ESP","Teleports","Misc","Scripts"}
 
@@ -272,6 +258,22 @@ for _,name in ipairs(tabNames) do
             if child:IsA("TextButton") then
                 child:Destroy()
             end
+        end
+
+        if name == "Scripts" then
+            local function scriptBtn(btnName, url)
+                local b = makeButton(btnName)
+                b.MouseButton1Click:Connect(function()
+                    setError("Executing: " .. btnName)
+                    loadstring(game:HttpGet(url))()
+                end)
+            end
+            scriptBtn("Infinite Yield", "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
+            scriptBtn("Dex Explorer", "https://raw.githubusercontent.com/infyiff/backup/main/dex.lua")
+            scriptBtn("FTF HAX", "https://raw.githubusercontent.com/LeviTheOtaku/roblox-scripts/main/FTFHAX.lua")
+            scriptBtn("Luaware", "https://raw.githubusercontent.com/bedra45/Random-games-xd/main/bedraFtfFinalGUI")
+            updateCanvas()
+            return
         end
 
         populateWIP()
