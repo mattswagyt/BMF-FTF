@@ -1,8 +1,7 @@
--- Flee the Facility - By BMF
+-- Flee the Facility UI - BMF
 
 -- Services
 local Players = game:GetService("Players")
-local ContextActionService = game:GetService("ContextActionService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -10,7 +9,7 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Helper: Instance Creator
+-- Instance Helper
 local function new(class, props, parent)
     local obj = Instance.new(class)
     if props then for k,v in pairs(props) do obj[k] = v end end
@@ -23,53 +22,83 @@ local screenGui = new("ScreenGui", {Name = "BMF_UI_FTF", ResetOnSpawn = false}, 
 
 -- Main Window
 local main = new("Frame", {
-    Name = "Main",
     Size = UDim2.new(0,520,0,520),
     Position = UDim2.new(0.5,-260,0.5,-260),
-    BackgroundColor3 = Color3.fromRGB(28,28,28),
+    BackgroundColor3 = Color3.fromRGB(15,15,15),
     BorderSizePixel = 0,
 }, screenGui)
 new("UICorner", {CornerRadius = UDim.new(0,10)}, main)
-new("UIStroke", {Color = Color3.fromRGB(22,22,22), Thickness = 1, Transparency = 0.9}, main)
+new("UIStroke", {Color = Color3.fromRGB(120,0,0), Thickness = 1, Transparency = 0.3}, main)
 
 -- Title Bar
-local titleBar = new("Frame", {Parent = main, Size = UDim2.new(1,0,0,48), BackgroundColor3 = Color3.fromRGB(40,40,40)}, main)
+local titleBar = new("Frame", {
+    Parent = main,
+    Size = UDim2.new(1,0,0,48),
+    BackgroundColor3 = Color3.fromRGB(120,0,0)
+})
 new("UICorner", {CornerRadius = UDim.new(0,8)}, titleBar)
+
 local titleLabel = new("TextLabel", {
     Parent = titleBar,
-    Text = "Flee The Facility - BMF",
+    Text = "Flee The Facility - BMF UI",
     BackgroundTransparency = 1,
-    Size = UDim2.new(1,-120,1,0),
+    Size = UDim2.new(1,-110,1,0),
     Position = UDim2.new(0,16,0,0),
     Font = Enum.Font.GothamBold,
     TextSize = 20,
     TextColor3 = Color3.fromRGB(255,255,255),
     TextXAlignment = Enum.TextXAlignment.Left,
-}, titleBar)
+})
 
--- Minimize/Maximize Button
+-- Dragging 
+local dragging, dragStart, startPos
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = main.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Minimize Button
 local toggleBtn = new("TextButton", {
     Parent = titleBar,
-    Size = UDim2.new(0,96,0,30),
-    Position = UDim2.new(1,-110,0,9),
+    Size = UDim2.new(0,90,0,30),
+    Position = UDim2.new(1,-96,0,9),
     Text = "Minimize",
+    TextColor3 = Color3.fromRGB(255,255,255),
+    BackgroundColor3 = Color3.fromRGB(90,0,0),
     Font = Enum.Font.Gotham,
     TextSize = 14,
-    TextColor3 = Color3.fromRGB(255,255,255),
-    BackgroundColor3 = Color3.fromRGB(65,65,65),
     BorderSizePixel = 0,
-}, titleBar)
+})
 new("UICorner", {CornerRadius = UDim.new(0,6)}, toggleBtn)
+
+local minimized = false
+toggleBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    main.Visible = not minimized
+end)
 
 -- Logger
 local errFrame = new("Frame", {
     Parent = main,
     Size = UDim2.new(1,-24,0,30),
     Position = UDim2.new(0,12,0,56),
-    BackgroundColor3 = Color3.fromRGB(44,44,44),
+    BackgroundColor3 = Color3.fromRGB(40,0,0),
     BorderSizePixel = 0,
-}, main)
+})
 new("UICorner", {CornerRadius = UDim.new(0,6)}, errFrame)
+
 local errLabel = new("TextLabel", {
     Parent = errFrame,
     Text = "Logging: None",
@@ -80,215 +109,113 @@ local errLabel = new("TextLabel", {
     TextSize = 14,
     TextColor3 = Color3.fromRGB(255,100,100),
     TextXAlignment = Enum.TextXAlignment.Left,
-}, errFrame)
+})
 
 local function setError(t) errLabel.Text = "Logging: " .. tostring(t or "None") end
 
--- Divider + Tabs Panel
-local divider = new("Frame", {Parent = main, Size = UDim2.new(0,2,1,-118), Position = UDim2.new(0,152,0,90), BackgroundColor3 = Color3.fromRGB(75,75,75)}, main)
+-- Tabs & Sections
+local divider = new("Frame", {Parent = main, Size = UDim2.new(0,2,1,-118), Position = UDim2.new(0,152,0,90), BackgroundColor3 = Color3.fromRGB(90,0,0)})
 
-local tabsPanel = new("Frame", {Parent = main, Size = UDim2.new(0,152,1,-118), Position = UDim2.new(0,0,0,90), BackgroundTransparency = 1}, main)
-local tabsLayout = new("UIListLayout", {Padding = UDim.new(0,8), SortOrder = Enum.SortOrder.LayoutOrder}, tabsPanel)
+local tabsPanel = new("Frame", {Parent = main, Size = UDim2.new(0,152,1,-118), Position = UDim2.new(0,0,0,90), BackgroundTransparency = 1})
+new("UIListLayout", {Padding = UDim.new(0,8), SortOrder = Enum.SortOrder.LayoutOrder}, tabsPanel)
 new("UIPadding", {PaddingLeft = UDim.new(0,12), PaddingTop = UDim.new(0,8)}, tabsPanel)
 
--- Buttons Panel
 local buttonsPanel = new("ScrollingFrame", {
     Parent = main,
-    Name = "ButtonsPanel",
     Size = UDim2.new(1,-180,1,-118),
     Position = UDim2.new(0,176,0,90),
     BackgroundTransparency = 1,
-    ScrollBarThickness = 8,
-}, main)
+    ScrollBarThickness = 6,
+})
 local buttonsLayout = new("UIListLayout", {Padding = UDim.new(0,8), SortOrder = Enum.SortOrder.LayoutOrder}, buttonsPanel)
-new("UIPadding", {PaddingLeft = UDim.new(0,4), PaddingRight = UDim.new(0,8), PaddingTop = UDim.new(0,8)}, buttonsPanel)
+new("UIPadding", {PaddingLeft = UDim.new(0,6), PaddingRight = UDim.new(0,6), PaddingTop = UDim.new(0,6)}, buttonsPanel)
 
 local function updateCanvas()
     RunService.Heartbeat:Wait()
     buttonsPanel.CanvasSize = UDim2.new(0,0,0, buttonsLayout.AbsoluteContentSize.Y + 12)
 end
 
--- Button Factory (returns created button)
+-- Button Creator
 local function makeButton(text)
     local btn = new("TextButton", {
         Parent = buttonsPanel,
         Size = UDim2.new(1,0,0,40),
-        BackgroundColor3 = Color3.fromRGB(72,72,72),
-        BorderSizePixel = 0,
+        BackgroundColor3 = Color3.fromRGB(35,0,0),
+        Text = text,
         Font = Enum.Font.Gotham,
         TextSize = 15,
         TextColor3 = Color3.fromRGB(255,255,255),
-        Text = text,
         AutoButtonColor = false,
-    }, buttonsPanel)
+        BorderSizePixel = 0,
+    })
     new("UICorner", {CornerRadius = UDim.new(0,6)}, btn)
 
     btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(92,92,92)}):Play()
+        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(150,0,0)}):Play()
     end)
     btn.MouseLeave:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(72,72,72)}):Play()
+        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(35,0,0)}):Play()
     end)
 
-    btn.MouseButton1Click:Connect(function()
-        setError("WIP Feature")
-    end)
-
-    return btn 
+    return btn
 end
 
-local function populateTabWIP()
-    -- clear any existing buttons first
-    for _, child in pairs(buttonsPanel:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
+local function populateWIP()
+    for _=1,6 do 
+        local b = makeButton("WIP Feature")
+        b.MouseButton1Click:Connect(function() setError("Feature not added yet") end)
     end
-    for _=1,6 do makeButton("WIP!") end
     updateCanvas()
 end
 
--- Draggable
-local dragging = false
-local dragStart, startPos
-local UIS = UserInputService
-local function updateDrag(input)
-    local delta = input.Position - dragStart
-    main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
+-- Tabs List
+local tabNames = {"Player","Beast","Survivor","ESP","Teleports","Misc","Scripts"}
 
-main.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = main.Position
-    end
-end)
-UIS.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        updateDrag(input)
-    end
-end)
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
--- Minimize / Maximize
-local minimized = false
-local origSize = main.Size
-toggleBtn.MouseButton1Click:Connect(function()
-    if minimized then
-        minimized = false
-        toggleBtn.Text = "Minimize"
-        errFrame.Visible = true
-        buttonsPanel.Visible = true
-        divider.Visible = true
-        tabsPanel.Visible = true
-        TweenService:Create(main, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {Size = origSize}):Play()
-    else
-        minimized = true
-        toggleBtn.Text = "Maximize"
-        errFrame.Visible = false
-        buttonsPanel.Visible = false
-        divider.Visible = false
-        tabsPanel.Visible = false
-        TweenService:Create(main, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {Size = UDim2.new(origSize.X.Scale, origSize.X.Offset, 0, 48)}):Play()
-    end
-end)
-
--- Toggle UI with Delete (fixed position bug)
-local visible = true
-local togglePosition = main.Position
-local function setVisible(v)
-    visible = v
-    main.Visible = v
-    main.Position = togglePosition
-    setError(v and "Menu opened" or "Menu closed")
-end
-
-ContextActionService:BindAction("BMF_TOGGLE_UI", function(_, state)
-    if state == Enum.UserInputState.Begin then
-        togglePosition = main.Position
-        setVisible(not visible)
-    end
-    return Enum.ContextActionResult.Sink
-end, false, Enum.KeyCode.Delete)
-
--- Create Tabs
-local tabNames = {"Player","Teleports","ESP","Cheats","Misc","Scripts"}
-local tabButtons = {}
 for _,name in ipairs(tabNames) do
     local tbtn = new("TextButton", {
         Parent = tabsPanel,
         Size = UDim2.new(1,-24,0,40),
-        BackgroundColor3 = Color3.fromRGB(55,55,55),
+        BackgroundColor3 = Color3.fromRGB(35,0,0),
         Text = name,
         Font = Enum.Font.Gotham,
         TextSize = 15,
         TextColor3 = Color3.fromRGB(255,255,255),
-    }, tabsPanel)
+        BorderSizePixel = 0,
+    })
     new("UICorner", {CornerRadius = UDim.new(0,6)}, tbtn)
 
     tbtn.MouseButton1Click:Connect(function()
-        -- Highlight selected tab
         for _,b in ipairs(tabsPanel:GetChildren()) do
-            if b:IsA("TextButton") then
-                b.BackgroundColor3 = Color3.fromRGB(55,55,55)
-            end
+            if b:IsA("TextButton") then b.BackgroundColor3 = Color3.fromRGB(35,0,0) end
         end
-        tbtn.BackgroundColor3 = Color3.fromRGB(92,92,92)
+        tbtn.BackgroundColor3 = Color3.fromRGB(150,0,0)
 
-        -- Clear existing buttons
         for _, child in pairs(buttonsPanel:GetChildren()) do
-            if child:IsA("TextButton") then
-                child:Destroy()
-            end
+            if child:IsA("TextButton") then child:Destroy() end
         end
 
-        -- If Scripts tab selected, load actual script buttons
-        if tbtn.Text == "Scripts" then
-
-            local function makeScriptBtn(name, url)
-                local btn = makeButton(name)
-                -- override the default WIP handler
-                btn.MouseButton1Click:Connect(function()
-                    pcall(function() setError("Loading: " .. name) end)
-                    local ok, err = pcall(function()
-                        local src = game:HttpGet(url, true)
-                        loadstring(src)()
-                    end)
-                    if not ok then
-                        setError(name .. " error: " .. tostring(err))
-                    else
-                        setError(name .. " loaded")
-                    end
+        if name == "Scripts" then
+            local function scriptBtn(btnName, url)
+                local b = makeButton(btnName)
+                b.MouseButton1Click:Connect(function()
+                    setError("Executing: " .. btnName)
+                    loadstring(game:HttpGet(url))()
                 end)
             end
 
-            makeScriptBtn("Infinite Yield", "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
-            makeScriptBtn("Dex Explorer", "https://raw.githubusercontent.com/infyiff/backup/main/dex.lua")
-            makeScriptBtn("FTF HAX", "https://raw.githubusercontent.com/LeviTheOtaku/roblox-scripts/main/FTFHAX.lua")
-            makeScriptBtn("Luaware", "https://raw.githubusercontent.com/bedra45/Random-games-xd/main/bedraFtfFinalGUI")
+            scriptBtn("Infinite Yield", "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
+            scriptBtn("Dex Explorer", "https://raw.githubusercontent.com/infyiff/backup/main/dex.lua")
+            scriptBtn("FTF HAX", "https://raw.githubusercontent.com/LeviTheOtaku/roblox-scripts/main/FTFHAX.lua")
+            scriptBtn("Luaware", "https://raw.githubusercontent.com/bedra45/Random-games-xd/main/bedraFtfFinalGUI")
 
             updateCanvas()
             return
         end
 
-        -- Otherwise load WIP placeholders
-        populateTabWIP()
+        populateWIP()
     end)
-
-    table.insert(tabButtons, tbtn)
 end
 
--- Default open Player
--- Highlight Player tab
-for _,tbtn in ipairs(tabButtons) do
-    if tbtn.Text == "Player" then
-        tbtn.BackgroundColor3 = Color3.fromRGB(92,92,92)
-        break
-    end
-end
-populateTabWIP()
-setError("BMF UI Loaded!")
-main.Visible = true
+-- Default Tab
+populateWIP()
+setError("✅ UI Loaded!")
